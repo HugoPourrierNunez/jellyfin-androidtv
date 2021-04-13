@@ -78,7 +78,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         ReportingHelper.reportStopped(mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, reportPos);
 
         //Check against a total failure (no apps installed)
-        if (playerFinishedTime - mLastPlayerStart < 1000) {
+        if (playerFinishedTime - mLastPlayerStart < 1000 && !mApplication.getPrefs().getBoolean("pref_use_zidoo_player", false)) {
             // less than a second - probably no player explain the option
             mApplication.getLogger().Info("Playback took less than a second - assuming it failed");
             if (!noPlayerError) handlePlayerError();
@@ -86,7 +86,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
 
         long runtime = mItemsToPlay.get(mCurrentNdx).getRunTimeTicks() != null ? mItemsToPlay.get(mCurrentNdx).getRunTimeTicks() / 10000 : 0;
-        if (pos == 0) {
+        if (pos == 0 || mApplication.getPrefs().getBoolean("pref_use_zidoo_player", false)) {
             //If item didn't play as long as its duration - confirm we want to mark watched
             if (!isLiveTv && playerFinishedTime - mLastPlayerStart < runtime * .9) {
                 new AlertDialog.Builder(this)
@@ -214,7 +214,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 // Just pass the path directly
                 mCurrentStreamInfo = new StreamInfo();
                 mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
-                startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
+                if(mApplication.getPrefs().getBoolean("pref_use_zidoo_player", false))
+                {
+                    startExternalZidooActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
+                }
+                else
+                {
+                    startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
+                }
             } else {
                 //Build options for player
                 VideoOptions options = new VideoOptions();
@@ -300,6 +307,44 @@ public class ExternalPlayerActivity extends FragmentActivity {
             noPlayerError = true;
             mApplication.getLogger().ErrorException("Error launching external player", e);
             handlePlayerError();
+        }
+
+    }
+
+    protected void startExternalZidooActivity(String path, String container) {
+
+        Intent newIntent = new Intent();
+
+        String from = "Local";
+        newIntent.putExtra("SourceFrom", from);
+        newIntent.setDataAndType(Uri.parse(path), "video/"+container);
+
+        newIntent.putExtra("MEDIA_BROWSER_USE_RT_MEDIA_PLAYER", true);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        newIntent.setPackage("com.android.gallery3d");
+        newIntent.setClassName("com.android.gallery3d", "com.android.gallery3d.app.ZDMCActivity");
+
+        String mode = "zdmc";
+        newIntent.putExtra("play_mode", mode);
+        String net_work = "local";
+        net_work = "smb";
+        newIntent.putExtra("net_mode", net_work);
+
+        newIntent.putExtra("smb_username", mApplication.getPrefs().getString("pref_smb_user_name", "none"));
+        newIntent.putExtra("smb_password", mApplication.getPrefs().getString("pref_smb_password", "none"));
+
+
+        mApplication.getLogger().Info("Starting external playback of path: %s and mime: video/%s",path,container);
+
+        try {
+            mLastPlayerStart = System.currentTimeMillis();
+            ReportingHelper.reportStart(mItemsToPlay.get(mCurrentNdx), 0);
+            startReportLoop();
+            startActivityForResult(newIntent, 1);
+
+        } catch (ActivityNotFoundException e) {
+            mApplication.getLogger().ErrorException("Zidoo player return error without reason, just ignoring", e);
         }
 
     }

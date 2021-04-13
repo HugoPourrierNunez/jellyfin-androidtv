@@ -110,6 +110,21 @@
             android:defaultValue="false"
             android:summary="@string/pref_use_direct_path_summary"
             />
+        <CheckBoxPreference android:key="pref_use_zidoo_player"
+            android:title="@string/pref_use_zidoo_player_title"
+            android:defaultValue="false"
+            />
+        <EditTextPreference
+            android:key="pref_smb_user_name"
+            android:defaultValue=""
+            android:singleLine="true"
+            android:title="@string/pref_smb_user_name_title" />
+        <EditTextPreference
+            android:key="pref_smb_password"
+            android:defaultValue=""
+            android:singleLine="true"
+            android:title="@string/pref_smb_password_title"
+            android:inputType="textPassword" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_live_tv_cat" android:key="pref_live_tv_category">
